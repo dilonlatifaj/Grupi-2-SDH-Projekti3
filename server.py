@@ -35,3 +35,47 @@ def verify_hmac(message: str, received_hmac: str) -> bool:
 def handle_client(conn: socket.socket, addr: tuple) -> None:
 
     logger.info("Connection established with %s:%s", *addr)
+
+with conn:
+        while True:
+            try:
+                data = conn.recv(BUFFER_SIZE)
+            except ConnectionResetError:
+                logger.warning("Client %s:%s reset the connection.", *addr)
+                break
+
+            if not data:
+                logger.info("Client %s:%s disconnected.", *addr)
+                break
+            try:
+                payload = json.loads(data.decode("utf-8"))
+                message: str = payload.get("message", "")
+                received_hmac: str = payload.get("hmac", "")
+
+                if not message or not received_hmac:
+                    raise ValueError("Payload missing 'message' or 'hmac' field.")
+
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                response = "Error: Invalid message format. Expected JSON with 'message' and 'hmac' fields."
+                logger.warning("Received malformed data from %s:%s", *addr)
+                conn.sendall(response.encode("utf-8"))
+                continue
+
+            except ValueError as exc:
+                response = f"Error: {exc}"
+                logger.warning("Incomplete payload from %s:%s — %s", *addr, exc)
+                conn.sendall(response.encode("utf-8"))
+                continue
+
+            print(f"\nMessage received with HMAC: [{message} | {received_hmac}]")
+            logger.info("Received message from %s:%s — validating HMAC...", *addr)
+            print("Validating HMAC...")
+
+            if verify_hmac(message, received_hmac):
+                response = "Message verified successfully. Integrity and authenticity confirmed."
+                print(response)
+                logger.info("HMAC verification PASSED for message from %s:%s", *addr)
+            else:
+                response = "Error: Message verification failed! Integrity compromised."
+                print(response)
+                logger.warning("HMAC verification FAILED for message from %s:%s", *addr)
