@@ -79,3 +79,37 @@ with conn:
                 response = "Error: Message verification failed! Integrity compromised."
                 print(response)
                 logger.warning("HMAC verification FAILED for message from %s:%s", *addr)
+
+            try:
+                conn.sendall(response.encode("utf-8"))
+            except BrokenPipeError:
+                logger.warning("Could not send response — client %s:%s already disconnected.", *addr)
+                break
+
+def start_server() -> None:
+    """
+    Bind to HOST:PORT and accept clients in a continuous loop.
+    Each client is handled sequentially (single-threaded).
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_sock:
+        server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server_sock.bind((HOST, PORT))
+        server_sock.listen()
+
+        print("Server started and awaiting messages...")
+        logger.info("Server listening on %s:%s", HOST, PORT)
+
+        while True:
+            try:
+                conn, addr = server_sock.accept()
+                handle_client(conn, addr)
+            except KeyboardInterrupt:
+                print("\nServer shutting down.")
+                logger.info("Server stopped by user (KeyboardInterrupt).")
+                break
+            except Exception as exc:
+                logger.error("Unexpected server error: %s", exc)
+
+
+if __name__ == "__main__":
+    start_server()
