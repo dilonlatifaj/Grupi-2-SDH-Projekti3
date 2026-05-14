@@ -56,3 +56,48 @@ def send_message(sock: socket.socket, message: str) -> str | None:
     response = data.decode("utf-8")
     logger.info("Received server response: %s", response)
     return response
+
+    def start_client() -> None:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.connect((HOST, PORT))
+            logger.info("Connected to server %s:%s", HOST, PORT)
+
+            while True:
+                try:
+                    user_msg = input("\nEnter your message (or 'exit' to quit): ").strip()
+                except (EOFError, KeyboardInterrupt):
+                    print("\nExiting.")
+                    break
+
+                if user_msg.lower() == "exit":
+                    logger.info("User requested disconnect.")
+                    break
+
+                if not user_msg:
+                    print("Message cannot be empty. Please try again.")
+                    continue
+
+                response = send_message(sock, user_msg)
+
+                if response is None:
+                    print("Connection to server lost. Exiting.")
+                    break
+
+                print(f"Server response: {response}")
+
+                if response.startswith("Error:"):
+                    logger.warning("Server reported an error — message may have been tampered with.")
+
+    except ConnectionRefusedError:
+        print(f"Error: Could not connect to the server at {HOST}:{PORT}.")
+        print("Make sure the server is running before starting the client.")
+        logger.error("Connection refused by %s:%s", HOST, PORT)
+
+    except Exception as exc:
+        logger.error("Unexpected client error: %s", exc)
+        print(f"An unexpected error occurred: {exc}")
+
+
+if __name__ == "__main__":
+    start_client()
