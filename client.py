@@ -57,7 +57,7 @@ def send_message(sock: socket.socket, message: str) -> str | None:
     logger.info("Received server response: %s", response)
     return response
 
-    def start_client() -> None:
+def start_client() -> None:
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((HOST, PORT))
