@@ -36,7 +36,7 @@ def handle_client(conn: socket.socket, addr: tuple) -> None:
 
     logger.info("Connection established with %s:%s", *addr)
 
-with conn:
+    with conn:
         while True:
             try:
                 data = conn.recv(BUFFER_SIZE)
